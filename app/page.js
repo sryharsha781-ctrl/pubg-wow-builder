@@ -5,36 +5,49 @@ export default function Home() {
   const [prompt, setPrompt] = useState("");
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   async function generate() {
+    setLoading(true);
     setError("");
     setResult(null);
 
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify({ prompt })
       });
 
-      const data = await res.json();
+      const text = await res.text();
+
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error("API did not return valid JSON.");
+      }
 
       if (!res.ok) {
-        throw new Error(data.error || "Something went wrong");
+        throw new Error(data.error || "Something went wrong.");
       }
 
       setResult(data.result);
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Something went wrong.");
+    } finally {
+      setLoading(false);
     }
   }
 
   return (
-    <div style={{ padding: 20, fontFamily: "Arial" }}>
+    <div style={{ padding: 20, fontFamily: "Arial, sans-serif" }}>
       <h1>PUBG WOW AI Map Builder</h1>
 
       <textarea
-        style={{ width: "100%", height: 100 }}
+        style={{ width: "100%", height: 120 }}
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
         placeholder="Describe your map..."
@@ -42,7 +55,10 @@ export default function Home() {
 
       <br />
       <br />
-      <button onClick={generate}>Generate</button>
+
+      <button onClick={generate} disabled={loading}>
+        {loading ? "Generating..." : "Generate"}
+      </button>
 
       {error && (
         <p style={{ color: "red", marginTop: 20 }}>
@@ -56,6 +72,7 @@ export default function Home() {
           <p><b>Mode:</b> {result.mode || "-"}</p>
           <p><b>Theme:</b> {result.theme || "-"}</p>
           <p><b>Players:</b> {result.players || "-"}</p>
+          <p><b>Summary:</b> {result.summary || "-"}</p>
 
           <h3>Layout</h3>
           <ul>
