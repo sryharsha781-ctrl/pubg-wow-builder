@@ -1,33 +1,43 @@
+"use client";
+
+import { useState } from "react";
+
 export default function Home() {
+  const [prompt, setPrompt] = useState("");
+  const [result, setResult] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function generate() {
+    setLoading(true);
+    setResult("");
+
+    const res = await fetch("/api/generate", {
+      method: "POST",
+      body: JSON.stringify({ prompt }),
+      headers: { "Content-Type": "application/json" }
+    });
+
+    const data = await res.json();
+    setResult(data.result || data.error);
+    setLoading(false);
+  }
+
   return (
-    <div style={{padding: 20, fontFamily: "Arial"}}>
+    <div style={{ padding: 20 }}>
       <h1>PUBG WOW AI Map Builder</h1>
-      <p>This is your deployed MVP.</p>
 
-      <h2>How it works</h2>
-      <ul>
-        <li>Enter a map idea</li>
-        <li>Generate blueprint</li>
-        <li>Follow build steps in PUBG WOW</li>
-      </ul>
+      <textarea
+        value={prompt}
+        onChange={(e) => setPrompt(e.target.value)}
+        placeholder="Describe your map..."
+        style={{ width: "100%", height: 120 }}
+      />
 
-      <h2>Example Output</h2>
-      <pre>
-Map Name: Iron Core Arena
-Mode: TDM
-Players: 4v4
+      <button onClick={generate}>
+        {loading ? "Generating..." : "Generate"}
+      </button>
 
-Layout:
-- Left flank
-- Mid lane
-- Right flank
-- Center tower
-
-Rules:
-- Fast respawn
-- No spawn kill
-- Balanced cover
-      </pre>
+      <pre>{result}</pre>
     </div>
   );
 }
