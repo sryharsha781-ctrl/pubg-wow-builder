@@ -1,24 +1,83 @@
-export async function POST(req) {
-  try {
-    const { prompt } = await req.json();
+"use client";
+import { useState } from "react";
 
-    const response = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        input: `Create a structured PUBG WOW map design: ${prompt}`
-      })
-    });
+export default function Home() {
+  const [prompt, setPrompt] = useState("");
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState("");
 
-    const data = await response.json();
+  async function generate() {
+    setError("");
+    setResult(null);
 
-    return Response.json({ result: data.output[0].content[0].text });
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt })
+      });
 
-  } catch (err) {
-    return Response.json({ error: "Error" });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Something went wrong");
+      }
+
+      setResult(data.result);
+    } catch (err) {
+      setError(err.message);
+    }
   }
+
+  return (
+    <div style={{ padding: 20, fontFamily: "Arial" }}>
+      <h1>PUBG WOW AI Map Builder</h1>
+
+      <textarea
+        style={{ width: "100%", height: 100 }}
+        value={prompt}
+        onChange={(e) => setPrompt(e.target.value)}
+        placeholder="Describe your map..."
+      />
+
+      <br />
+      <br />
+      <button onClick={generate}>Generate</button>
+
+      {error && (
+        <p style={{ color: "red", marginTop: 20 }}>
+          {error}
+        </p>
+      )}
+
+      {result && (
+        <div style={{ marginTop: 30 }}>
+          <h2>{result.mapName || "Untitled Map"}</h2>
+          <p><b>Mode:</b> {result.mode || "-"}</p>
+          <p><b>Theme:</b> {result.theme || "-"}</p>
+          <p><b>Players:</b> {result.players || "-"}</p>
+
+          <h3>Layout</h3>
+          <ul>
+            {(result.layout || []).map((x, i) => <li key={i}>{x}</li>)}
+          </ul>
+
+          <h3>Rules</h3>
+          <ul>
+            {(result.rules || []).map((x, i) => <li key={i}>{x}</li>)}
+          </ul>
+
+          <h3>Weapons</h3>
+          <ul>
+            {(result.weapons || []).map((x, i) => <li key={i}>{x}</li>)}
+          </ul>
+
+          <h3>Build Steps</h3>
+          <ol>
+            {(result.buildSteps || []).map((x, i) => <li key={i}>{x}</li>)}
+          </ol>
+        </div>
+      )}
+    </div>
+  );
 }
