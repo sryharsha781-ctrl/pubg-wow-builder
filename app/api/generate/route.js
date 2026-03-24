@@ -1,3 +1,4 @@
+```javascript
 export async function POST(req) {
   try {
     const { prompt } = await req.json();
@@ -15,9 +16,7 @@ export async function POST(req) {
       body: JSON.stringify({
         model: "gpt-4o-mini",
         input: `
-You are a PUBG WOW map designer.
-
-Return ONLY valid JSON in this exact shape:
+Return ONLY valid JSON for a PUBG WOW map in this exact shape:
 {
   "mapName": "string",
   "mode": "string",
@@ -27,7 +26,13 @@ Return ONLY valid JSON in this exact shape:
   "layout": ["string"],
   "rules": ["string"],
   "weapons": ["string"],
-  "buildSteps": ["string"]
+  "buildSteps": ["string"],
+  "qa": {
+    "spawnSafety": number,
+    "fairness": number,
+    "flow": number,
+    "performance": number
+  }
 }
 
 Prompt: ${prompt}
@@ -44,27 +49,27 @@ Prompt: ${prompt}
       );
     }
 
-    const text =
+    let text =
       data.output_text ||
       data.output?.[0]?.content?.[0]?.text ||
       "";
 
-    let parsed;
+    text = text.trim();
 
+    if (text.startsWith("```json")) {
+      text = text.replace(/^```json\s*/i, "").replace(/\s*```$/i, "");
+    } else if (text.startsWith("```")) {
+      text = text.replace(/^```\s*/i, "").replace(/\s*```$/i, "");
+    }
+
+    let parsed;
     try {
       parsed = JSON.parse(text);
     } catch {
-      parsed = {
-        mapName: "Generated Map",
-        mode: "Custom",
-        theme: "Mixed",
-        players: "Unknown",
-        summary: text || "No structured output returned.",
-        layout: [],
-        rules: [],
-        weapons: [],
-        buildSteps: []
-      };
+      return Response.json(
+        { error: "Model did not return valid JSON.", raw: text },
+        { status: 500 }
+      );
     }
 
     return Response.json({ result: parsed });
